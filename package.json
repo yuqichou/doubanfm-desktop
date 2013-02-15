@@ -1,0 +1,14 @@
+{
+    "name": "doubanfm-desktop",
+    "main": "index.html",
+    "window": {
+        "toolbar": false,
+        "width": 280,
+        "height": 370,
+        "position": "center",
+        "min_width": 280,
+        "min_height": 370,
+        "as_desktop": true
+    }
+}
+

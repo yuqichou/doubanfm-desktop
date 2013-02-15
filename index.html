@@ -1,0 +1,351 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <title>DoubanFM Desktop</title>
+    <link rel="stylesheet" href="static/bootstrap/css/bootstrap.css"/>
+    <link rel="stylesheet" href="static/bootstrap/css/bootstrap-responsive.css"/>
+    <script language="JavaScript" src="static/jquery-1.9.0.js"></script>
+    <script language="javascript" src="static/bootstrap/js/bootstrap.js"></script>
+    <script language="javascript" src="static/jquery.jplayer.min.js"></script>
+    <script language="javascript" src="channels.js"></script>
+    <script language="javascript" src="doubanapi.js"></script>
+</head>
+<body>
+
+
+<div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+        <div class="container-fluid">
+            <a id="signBtn" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                sign in
+            </a>
+            <a class="brand" href="#">DoubanFm</a>
+
+            <div id="myCollapsible" class="nav-collapse collapse">
+                <form class="form-horizontal" onsubmit="return false;">
+                    <input id="email" type="text" class="input-small" placeholder="Email">
+                    <input id="password" type="password" class="input-small" placeholder="Password">
+                    <img onclick="javascript:showCaptcha();" id="captcha" width="145px;" src=""/>
+                    <input id="captcha_value" type="text" class="input-small" placeholder="captcha">
+                    <button class="btn" onclick="javascript:login();">Sign in</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div align="center">
+    <div class="container-fluid">
+        <div class="row-fluid hide" id="errorRow">
+            <div class="span12 alert alert-error">
+                <span id="errorMsg"></span>
+                <button type="button" class="close" data-dismiss="alert">×</button>
+            </div>
+        </div>
+
+        <div class="row-fluid">
+            <div class="span12">
+                <a id="albumLink" target="_blank" href="#"><img class="img-polaroid" id="picture" src="static/cover.png"/></a>
+            </div>
+        </div>
+        <div class="row-fluid">
+            &nbsp;
+        </div>
+        <div class="progress">
+            <div class="bar" id="playProcess" ></div>
+        </div>
+        <div id="jp_container_1" class="row-fluid">
+            <div class="span12">
+                <table>
+                    <tr>
+                        <td colspan="3">
+                            <p class="muted">
+                                <span class="jp-current-time"></span>
+                                /
+                                <span class="jp-duration"></span>
+                            </p>
+                        </td>
+                        <td>
+                            <p class="muted" id="channelName"></p>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <button id="playBtn" type="button" class="btn"><i class="icon-play jp-play"></i></button>
+                            <button id="pauseBtn" type="button" class="btn hide"><i class="icon-pause jp-pause"></i></button>
+                        </td>
+                        <td>
+                            <button id="nextBtn" type="button" class="btn"><i class="icon-forward"></i></button>
+                        </td>
+                        <td>
+                            <button id="starBtn" onclick="javascript:likeSong();" type="button" class="btn"><i id="starIcon" class="icon-star-empty"></i></button>
+
+                        </td>
+                        <td>
+                            <a href="#myModal" role="button" class="btn" data-toggle="modal"><i class="icon-tasks"></i></a>
+                        </td>
+                    </tr>
+
+
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="myModal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h5 id="memoTip"></h5>
+    </div>
+    <div class="modal-body">
+        <ul class="nav nav-list" id="channels">
+        </ul>
+    </div>
+</div>
+
+
+<div id="jquery_jplayer_1"></div>
+
+
+</body>
+
+
+<script type="text/javascript">
+    var playProcess=$('#playProcess');
+    var api=require('./doubanapi.js');
+    var playlist=new Array();
+    var defaultChannel=channels[0];
+    var currentChannel=defaultChannel.id;
+    var cookieToken=null;
+    var sid;
+
+    $(document).ready(function () {
+        $("#jquery_jplayer_1").jPlayer({
+
+            ready: function (event) {
+                getPlaylist(currentChannel,function(){
+                    playSong(playlist.pop());
+                });
+            },
+
+            play:function(event){
+                $("#playBtn").hide();
+                $('#pauseBtn').show();
+            },
+            pause:function(event){
+                $("#playBtn").show();
+                $('#pauseBtn').hide();
+            },
+            stop:function(event){
+                $("#playBtn").show();
+                $('#pauseBtn').hide();
+            },
+            timeupdate: function(event) {
+                playProcess.css("width",event.jPlayer.status.currentPercentAbsolute+'%');
+            },
+            ended: function(event) {
+                api.playReceipt(sid,currentChannel,cookieToken);
+                playNext();
+            },
+            swfPath: "js",
+            supplied: "m4a",
+            wmode: "window"
+        });
+
+
+        $('#nextBtn').bind('click',playNext);
+
+        for(var k=0;k<channels.length;k++){
+            var li=$('<li channel="'+channels[k].id+'"><a href="javascript:void(0)">'+channels[k].name+'</a></li>');
+            $('#channels').append(li);
+        }
+
+        $('#channels').children().each(function(){
+            $(this).bind('click',function(){
+                channelChanged($(this).attr('channel'));
+            })
+        });
+
+        $('#channelName').html(defaultChannel.name);
+
+        $('#myCollapsible').on('show', function () {
+            showCaptcha();
+        })
+
+
+
+        if(window.localStorage.cookieExpire!=null){
+            var expireTime=new Date(window.localStorage.cookieExpire);
+            if(new Date()<expireTime){
+                var userJson=window.localStorage.userInfo;
+                var userInfo=JSON.parse(userJson);
+                cookieToken=window.localStorage.cookieToken;
+                $('#signBtn').html(userInfo.name);
+            }
+        }
+
+        $("#myModal").on('show',function(){
+            $('#channels').children().each(function(){
+                if($(this).attr('channel')==currentChannel){
+                    $(this).addClass('active');
+                }else{
+                    $(this).removeClass('active');
+                }
+            });
+        });
+
+    });
+
+    function login(){
+        var email=$('#email').val();
+        var password=$('#password').val();
+        var captcha=$('#captcha_value').val();
+        var captchaId=$('#captcha').attr('captchaId');
+        userLogin(email,password,captchaId,captcha,
+        function(userinfo,result){
+            cookieToken=result;
+
+
+            $('#errorRow').hide();
+            $('#errorMsg').html();
+            $('#signBtn').html(userinfo.user_info.name);
+            $('#myCollapsible').collapse('hide');
+
+            window.localStorage.cookieToken=cookieToken;
+            window.localStorage.userInfo=JSON.stringify(userinfo.user_info);
+            window.localStorage.cookieExpire=new Date(new Date().getTime()+20*24*60*60*1000);
+        },
+        function(failedInfo){
+            if(failedInfo.err_no==1011){
+                showCaptcha();
+            }
+            $('#errorMsg').html(failedInfo.err_msg);
+            $('#errorRow').fadeIn();
+        });
+    }
+
+    function showCaptcha(){
+        api.newCaptchaId(function(result){
+            var captchaUrl='http://douban.fm/misc/captcha?size=m&id='+result;
+            $('#captcha').attr('src',captchaUrl);
+            $('#captcha').attr('captchaId',result);
+        });
+    }
+
+    function channelChanged(channel){
+        if(currentChannel==channel){
+            return;
+        }
+        if((channel==0 || channel==-3) && cookieToken==null){
+            $('#memoTip').html('<p class="text-error">私人红心兆赫需先登陆</p>');
+            return;
+        }
+        $('#memoTip').html('频道加载中...');
+        currentChannel=channel;
+        getPlaylist(currentChannel,function(){
+            playSong(playlist.pop());
+
+            for(var k=0;k<channels.length;k++){
+                if(channels[k].id==channel){
+                    $('#channelName').html(channels[k].name);
+                }
+            }
+            $('#memoTip').html('');
+            $('#myModal').modal('hide');
+        });
+    }
+
+
+    function playNext(){
+        playSong(playlist.pop());
+    }
+
+    function getPlaylist(channel,callback){
+
+        var getPlaylistCallback=function(result,warning){
+            for(var i = 0;i<result.length;i++){
+                playlist.push(result[i]);
+            }
+            if(typeof callback =='function'){
+                callback(playlist);
+            }
+            //登陆过期
+            if(warning!=null && warning.indexOf('user')!=-1){
+                cookieToken=null;
+                window.localStorage.removeItem('userInfo');
+                window.localStorage.removeItem('cookieToken');
+                window.localStorage.removeItem('cookieExpire');
+                $('#signBtn').html('sign in');
+            }
+        };
+
+        if(cookieToken==null){
+            api.getPlaylist(channel,getPlaylistCallback);
+        }else{
+            api.getPlaylist(channel,getPlaylistCallback,cookieToken);
+        }
+
+    }
+
+    function playSong(song){
+
+        if(!song){
+            return;
+        }
+
+        sid=song.sid;
+        var title=song.title;
+        var picture=song.picture;
+        var url=song.url;
+        var artist=song.artist;
+        var album=song.album;
+        var like=song.like;
+
+        $('#albumLink').attr('href','http://music.douban.com'+album);
+
+        $('#picture').attr('src',picture);
+
+        $('title').html(title+"  --  "+artist);
+
+        if(like==1){
+            $('#starIcon').removeClass('icon-star-empty');
+            $('#starIcon').addClass('icon-star');
+        }else{
+            $('#starIcon').addClass('icon-star-empty');
+            $('#starIcon').removeClass('icon-star');
+        }
+
+        $('#jquery_jplayer_1').jPlayer("setMedia", {
+            m4a: url
+        }).jPlayer("play");
+
+        if(playlist.length<2){
+            getPlaylist(currentChannel);
+        }
+    }
+
+    function likeSong(){
+        var action;
+        if($('#starIcon').hasClass('icon-star-empty')){
+            $('#starIcon').removeClass('icon-star-empty');
+            $('#starIcon').addClass('icon-star');
+            action='like';
+        }else{
+            action='dislike';
+            $('#starIcon').addClass('icon-star-empty');
+            $('#starIcon').removeClass('icon-star');
+        }
+
+        api.likeSong(action,sid,currentChannel,cookieToken);
+    }
+
+</script>
+
+
+</html>
+
+
+
