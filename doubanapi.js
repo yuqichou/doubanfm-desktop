@@ -1,8 +1,19 @@
 var http = require('http');
-var rest = require('./restler');
+var rest = require('./restler')
+var fs=require('fs');
 
+var HOME=process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME']+'/douban_music/';
+fs.exists(HOME, function (exists) {
+    if(!exists){
+        fs.mkdir(HOME);
+    }
+});
 
 var API_PLAYLIST = 'http://douban.fm/j/mine/playlist';
+
+var NEED_DOWNLOAD=0;
+
+
 
 /**
  * 播放列表
@@ -74,7 +85,6 @@ function userLogin(email,password,captcha_id,captcha_value,callback,callbackfail
                 }
             }
             var cookies = response.headers['set-cookie'];
-            var cookieToken=null;
             for(var i = 0;i<cookies.length;i++){
                 var setCookies=cookies[i].split(';');
                 for (var j = 0; j < setCookies.length; j++) {
@@ -148,12 +158,44 @@ function likeSong(like,sid,channel,cookieToken){
 
 }
 
+function downloadSong(song){
 
+    var options=require('url').parse(song.url, true);
+    var fileName=song.title;
+    if(song.artist.length>0){
+        fileName+=' -- '+song.artist;
+    }
+    fileName+='.mp3'
+
+    fs.exists(HOME+fileName, function (exists) {
+        if(!exists){
+            http.get(options, function(res){
+                var data = ''
+                res.setEncoding('binary')
+                res.on('data', function(chunk){
+                    data += chunk
+                })
+                res.on('end', function(){
+                    fs.writeFile(HOME+fileName, data, 'binary', function(err){
+                        console.log(err);
+                    })
+                })
+            })
+        }
+    });
+}
+
+module.exports['HOME']=HOME
+module.exports['NEED_DOWNLOAD']=NEED_DOWNLOAD
 module.exports['getPlaylist']=getPlaylist;
 module.exports['newCaptchaId']=newCaptchaId;
 module.exports['userLogin']=userLogin;
 module.exports['playReceipt']=playReceipt;
 module.exports['likeSong']=likeSong;
+module.exports['downloadSong']=downloadSong;
+
+
+
 
 
 
