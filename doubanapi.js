@@ -141,12 +141,16 @@ function likeSong(like,sid,channel,cookieToken){
         headers.Cookie='dbcl2='+cookieToken+';';
     }
 
-    var url;
+    var type;
     if(like == 'like'){
-        url = '?type=r&sid='+sid+'&pt=42.4&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
+        type = 'r';
+//        url = '?type=r&sid='+sid+'&pt=42.4&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
     }else if(like == 'dislike'){
-        url = '?type=u&sid='+sid+'&pt=102.3&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
+        type = 'u'
+//        url = '?type=u&sid='+sid+'&pt=102.3&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
     }
+    var url='?type='+type+'&sid='+sid+'&pt=102.3&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
+
     rest.get(API_PLAYLIST + url
         , {
             headers: headers
@@ -165,7 +169,8 @@ function downloadSong(song){
     if(song.artist.length>0){
         fileName+=' -- '+song.artist;
     }
-    fileName+='.mp3'
+
+    fileName=fileName.replace(/\//g,"&")+'.mp3'
 
     fs.exists(HOME+fileName, function (exists) {
         if(!exists){
@@ -185,7 +190,7 @@ function downloadSong(song){
     });
 }
 
-module.exports['HOME']=HOME
+module.exports['HOME']=HOME 
 module.exports['NEED_DOWNLOAD']=NEED_DOWNLOAD
 module.exports['getPlaylist']=getPlaylist;
 module.exports['newCaptchaId']=newCaptchaId;
@@ -193,10 +198,3 @@ module.exports['userLogin']=userLogin;
 module.exports['playReceipt']=playReceipt;
 module.exports['likeSong']=likeSong;
 module.exports['downloadSong']=downloadSong;
-
-
-
-
-
-
-
