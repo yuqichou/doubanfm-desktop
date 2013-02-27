@@ -48,10 +48,10 @@ $(document).ready(function () {
     }
 
     if(window.localStorage.autoDownload==1){
-        $('#dlSwitch').attr('checked',true);
+        $('#dlSwitchArea').bootstrapSwitch('setState', true);
         api.NEED_DOWNLOAD=1;
     }else if(window.localStorage.autoDownload==0){
-        $('#dlSwitch').attr('checked',false);
+        $('#dlSwitchArea').bootstrapSwitch('setState', false);
         api.NEED_DOWNLOAD=0;
     }
 
@@ -70,6 +70,16 @@ $(document).ready(function () {
 
 
     $('#savePath').html(api.HOME);
+
+    $('#dlSwitchArea').on('switch-change', function (e, data) {
+        if(data.value){
+            api.NEED_DOWNLOAD=1;
+            window.localStorage.autoDownload=1;
+        }else{
+            api.NEED_DOWNLOAD=0;
+            window.localStorage.autoDownload=0;
+        }
+    });
 
 
     $("#jquery_jplayer_1").jPlayer({
@@ -256,13 +266,3 @@ function likeSong() {
     api.likeSong(action, sid, currentChannel, cookieToken);
 }
 
-
-function downloadSwitch(cb){
-    if($(cb)[0].checked){
-        api.NEED_DOWNLOAD=1;
-        window.localStorage.autoDownload=1;
-    }else{
-        api.NEED_DOWNLOAD=0;
-        window.localStorage.autoDownload=0;
-    }
-}
