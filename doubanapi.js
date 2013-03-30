@@ -144,10 +144,8 @@ function likeSong(like,sid,channel,cookieToken){
     var type;
     if(like == 'like'){
         type = 'r';
-//        url = '?type=r&sid='+sid+'&pt=42.4&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
     }else if(like == 'dislike'){
         type = 'u'
-//        url = '?type=u&sid='+sid+'&pt=102.3&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
     }
     var url='?type='+type+'&sid='+sid+'&pt=102.3&channel='+channel+'&pb=192&from=mainsite&kbps=192&r='+random;
 
@@ -167,7 +165,7 @@ function downloadSong(song){
     var options=require('url').parse(song.url, true);
     var fileName=song.title;
     if(song.artist.length>0){
-        fileName+=' -- '+song.artist;
+        fileName=song.artist+' - '+fileName;
     }
 
     fileName=fileName.replace(/\//g,"&")+'.mp3'
